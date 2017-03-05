@@ -1,0 +1,108 @@
+England-India test Series, 2014
+========================================================
+
+This is an analysis of the peformance of the first 5 batsmen (not necessarily the "top" five) of each side.
+
+```{r ,echo=FALSE}
+#Read the data first. Note, we are using echo=FALSE here as we do not want to see
+#the R code in the final output
+scores<-read.csv("knitr_ex_1.csv")
+#Split the data frame into subsets for India and England
+#We could have done this using the subscript operator [],
+#but will try the subset() function here
+india<-subset(scores,side=="India")
+england<-subset(scores,side=="England")
+```
+As a first step we add the total runs scored by these batsmen
+
+```{r ,echo=FALSE}
+#We could have used our familiar ddply() as follows: 
+#ddply(india,"batsman", function(y) sum(y$runs))
+#Trying out aggretage() which is part of the base R package
+india.total.runs<-aggregate(india["runs"],by=list(batsman=india$batsman),FUN=sum) #india[,5] is also OK instead of "india["runs"]" but the latter is probably more intuituve
+england.total.runs<-aggregate(england["runs"],by=list(batsman=england$batsman),FUN=sum)
+#Sort them in descending order
+
+india.total.runs<-india.total.runs[order(india.total.runs$runs, decreasing=TRUE),]
+england.total.runs<-england.total.runs[order(england.total.runs$runs, decreasing=TRUE),]
+#Having obtained the summaries, we print them in tabular form in the next chunk
+```
+As we can see `r as.character(india.total.runs[1,1])` has scored themost runs for India so far
+```{r , results='asis', message=FALSE, echo=FALSE} 
+require(knitr)
+kable(india.total.runs, format="html")
+```
+while `r as.character(england.total.runs[1,1])` piled the maximum runs for England
+```{r , results='asis', message=FALSE, echo=FALSE} 
+kable(england.total.runs, format="html")
+```
+
+We would now look at the averages per match and the strike rates, which would complete the picture of how good each of these batsmen were
+
+```{r ,echo=FALSE}
+india.avg.runs<-aggregate(india["runs"],by=list(batsman=india$batsman),FUN=mean)
+england.avg.runs<-aggregate(england["runs"],by=list(batsman=england$batsman),FUN=mean)
+india.avg.runs<-india.avg.runs[order(india.avg.runs$runs, decreasing=TRUE),]
+england.avg.runs<-england.avg.runs[order(england.avg.runs$runs, decreasing=TRUE),]
+
+```
+For India, `r as.character(india.avg.runs[1,1])` had the best per-match average
+```{r , results='asis', message=FALSE, echo=FALSE} 
+require(knitr)
+kable(india.avg.runs, format="html")
+```
+whereas `r as.character(england.avg.runs[1,1])` shone for England with the best average:
+
+```{r , results='asis', message=FALSE, echo=FALSE} 
+require(knitr)
+kable(england.avg.runs, format="html")
+```
+What about strike rates ? Lets look at the runs scored per 100 deliveries. 
+
+```{r,message=FALSE,echo=FALSE}
+#Let's use our new-found knowledge of transform() in the plyr package to 
+#add a "calculated"" field "strike_rate"
+require(plyr)
+india<-ddply(india,"batsman", transform, strike_rate=(runs/balls_Faced)*100.0)
+england<-ddply(england,"batsman", transform, strike_rate=(runs/balls_Faced)*100.0)
+
+india.strike.rate<-aggregate(india["strike_rate"],by=list(batsman=india$batsman),FUN=mean)
+england.strike.rate<-aggregate(england["strike_rate"],by=list(batsman=england$batsman),FUN=mean)
+india.strike.rate<-india.strike.rate[order(india.strike.rate$strike_rate, decreasing=TRUE),]
+england.strike.rate<-england.strike.rate[order(england.strike.rate$strike_rate, decreasing=TRUE),]
+
+```
+For India, `r as.character(india.strike.rate[1,1])` had the best strike rate
+```{r , results='asis', message=FALSE, echo=FALSE} 
+kable(india.strike.rate, format="html")
+```
+whereas `r as.character(england.strike.rate[1,1])` had the best strike rate for England:
+
+```{r , results='asis',echo=FALSE} 
+kable(england.strike.rate, format="html")
+```
+
+Let's see how the strike rates stackup graphically:
+
+```{r fig.width=7, fig.height=6, echo=FALSE, message=FALSE}
+plot(india.strike.rate$strike_rate, col="red", type="l", pch=19, ylab="Strike Rates", xlab="Batsmen")
+points(england.strike.rate$strike_rate, col="green", type="l", pch=19)
+legend("topright", c("India", "England"), lty=c(1,1), col=c("red","green"))
+```
+Let's see how these batsmen have got out. As one would expect in England - where the ball swings a lot - one would expect a lot of them to be out caught. We will find out if that's indeed the case
+
+```{r, echo=FALSE, message=FALSE}
+#Use the table() function to create a frequency table and sort them in descending order
+india.outs<-table(india$how_out)
+india.outs<-india.outs[order(india.outs, decreasing=T) ]
+england.outs<-table(england$how_out)
+england.outs<-england.outs[order(england.outs, decreasing=T) ]
+```
+As expected `r as.character(labels(india.outs[1][1]))` comprises the biggest chunk of dismissals of the Indian batsmen whereas `r as.character(labels(england.outs[1][1]))` was the reason for sending the English batsmen on the long walk back to thw pavilion. We can create a pie to compare how the categories stack up
+
+```{r , message=FALSE, echo=FALSE,fig.width=10, fig.height=9}
+#First create a plot area to hold two pie charts in a row
+par(mfrow=c(1,2))
+pie(india.outs, main="India - Dismissals")
+pie(england.outs, main="England - Dismissals")
+```
